@@ -1,35 +1,82 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>あなたのＨＰタイトル</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="ページの説明">
-<meta name="keywords" content="ページのキーワードA,B,C">
-<link rel="stylesheet" href="index.css">
+  <meta charset="UTF-8" />
+  <title>note 投稿一覧</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f7f7f7;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 20px;
+    }
+    .post {
+      background: #fff;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+    }
+    .post a {
+      text-decoration: none;
+      color: #111;
+      font-weight: bold;
+    }
+    .meta {
+      font-size: 12px;
+      color: #666;
+      margin-top: 6px;
+    }
+  </style>
 </head>
 <body>
-<div id="outer">
-<header><div id="header-inner"><h1>あなたのＨＰタイトル</h1>
-</div></header>
-<main><div id="text">
-<h2>記事ページ見出し・大</h2>
-<p>文章あれこれ</p>
-<h3>記事ページ見出し・中</h3>
-<p>文章あれこれ</p>
-<h4>記事ページ見出し・小</h4>
-<p>文章あれこれ</p>
-</div>
-</main>
-<aside>
-<div class="side-title">menu</div>
-<div class="side">
-<ul>
-<li>記事ページへのリンク</li>
-<li>記事ページへのリンク</li>
-</ul>
-</div>
-</aside>
-<footer>© 2010 あなたのホームページ</footer>
-</div></body>
+
+<h1>note 投稿一覧</h1>
+<div id="posts">読み込み中...</div>
+
+<script>
+  const USER_NAME = "fladdict"; // ← noteのユーザーID
+  const PAGE = 1;
+  const COUNT = 10;
+
+  const API_URL = `https://note.com/api/v2/creators/${USER_NAME}/contents?kind=note&page=${PAGE}&count=${COUNT}`;
+
+  async function loadPosts() {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+
+      const posts = data.data.contents;
+      const container = document.getElementById("posts");
+      container.innerHTML = "";
+
+      posts.forEach(post => {
+        const div = document.createElement("div");
+        div.className = "post";
+
+        div.innerHTML = `
+          <a href="https://note.com/${USER_NAME}/n/${post.key}" target="_blank">
+            ${post.title}
+          </a>
+          <div class="meta">
+            投稿日: ${post.publishAt.slice(0, 10)} /
+            ❤️ ${post.likeCount}
+          </div>
+        `;
+
+        container.appendChild(div);
+      });
+
+    } catch (e) {
+      document.getElementById("posts").innerText =
+        "取得に失敗しました（CORS制限の可能性があります）";
+      console.error(e);
+    }
+  }
+
+  loadPosts();
+</script>
+
+</body>
 </html>
