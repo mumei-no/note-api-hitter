@@ -35,6 +35,7 @@ body.dark .toastui-calendar * {
 <section class="section">
   <div class="container">
 
+    <!-- 操作バー -->
     <div class="level mb-4">
       <div class="level-left">
         <button id="prev" class="button">◀</button>
@@ -46,7 +47,9 @@ body.dark .toastui-calendar * {
       </div>
     </div>
 
+    <!-- カレンダー -->
     <div id="calendar" style="height: 700px;"></div>
+
   </div>
 </section>
 
@@ -60,6 +63,7 @@ body.dark .toastui-calendar * {
 let calendar;
 let isDark = false;
 
+/* ===== カレンダー生成 ===== */
 function createCalendar() {
   if (calendar) calendar.destroy();
 
@@ -73,39 +77,47 @@ function createCalendar() {
     usageStatistics: false
   });
 
-  // ✅ 正しいイベントクリック
+  // 公式イベントクリック
   calendar.on('clickEvent', function(info) {
     const url = info.event.raw?.link;
-    if (url) {
-      window.open(url, '_blank');
-    }
+    if (url) window.open(url, '_blank');
   });
 
-  loadNotePosts();
+  loadAllFeeds();
 }
 
-function loadNotePosts() {
-  const rssUrl = encodeURIComponent('https://note.com/mumeino/rss');
+/* ===== RSS 読み込み（複数） ===== */
+function loadFeed(userId, calendarId, bgColor) {
+  const rssUrl = encodeURIComponent(`https://note.com/${userId}/rss`);
   const api = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
 
-  $.getJSON(api, function(data) {
+  return $.getJSON(api, function(data) {
     const events = data.items.map(item => ({
       id: item.guid,
-      calendarId: 'note',
+      calendarId,
       title: item.title,
       start: item.pubDate,
       end: item.pubDate,
       isAllDay: true,
       category: 'allday',
+      backgroundColor: bgColor,
       raw: {
         link: item.link
       }
     }));
-
     calendar.createEvents(events);
   });
 }
 
+function loadAllFeeds() {
+  // 個人
+  loadFeed('mumeino', 'mumeino', '#3273dc'); // Bulma blue
+
+  // note公式
+  loadFeed('info', 'note-info', '#23d160'); // Bulma green
+}
+
+/* ===== 初期化 ===== */
 $(function() {
   createCalendar();
 
