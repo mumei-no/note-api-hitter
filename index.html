@@ -46,7 +46,6 @@
     .controls {
       display: flex;
       gap: 8px;
-      align-items: center;
     }
 
     button {
@@ -95,15 +94,10 @@
       isReadOnly: true,
       month: {
         startDayOfWeek: 0
-      },
-      template: {
-        time(event) {
-          return `${event.startTime} ${event.title}`;
-        }
       }
     });
 
-    // ナビゲーション
+    // 月移動
     document.getElementById('prev').onclick = () => calendar.prev();
     document.getElementById('next').onclick = () => calendar.next();
     document.getElementById('today').onclick = () => calendar.today();
@@ -113,7 +107,7 @@
       document.body.classList.toggle('dark');
     };
 
-    // イベントクリック
+    // イベントクリック → note記事を開く
     calendar.on('clickEvent', ({ event }) => {
       if (event.url) {
         window.open(event.url, '_blank', 'noopener');
@@ -130,21 +124,18 @@
         const events = data.items.map(item => {
           const date = new Date(item.pubDate);
 
-          // ローカル時間をそのまま使う
-          const y = date.getFullYear();
-          const m = String(date.getMonth() + 1).padStart(2, '0');
-          const d = String(date.getDate()).padStart(2, '0');
-          const hh = String(date.getHours()).padStart(2, '0');
-          const mm = String(date.getMinutes()).padStart(2, '0');
+          // UTCのまま日付だけ使う（安定）
+          const y = date.getUTCFullYear();
+          const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+          const d = String(date.getUTCDate()).padStart(2, '0');
 
           return {
             id: item.guid,
             calendarId: 'note',
             title: item.title,
-            category: 'time',
-            start: `${y}-${m}-${d}T${hh}:${mm}`,
-            end: `${y}-${m}-${d}T${hh}:${mm}`,
-            startTime: `${hh}:${mm}`,
+            category: 'allday',
+            start: `${y}-${m}-${d}`,
+            end: `${y}-${m}-${d}`,
             url: item.link,
             backgroundColor: '#6b4f3f',
             color: '#fff'
