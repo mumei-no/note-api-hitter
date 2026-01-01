@@ -68,15 +68,30 @@
 <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
 
 <script>
-  // ===== 設定 =====
-  const USER = "mumeino"; // noteユーザー名
+  // ==============================
+  // 設定
+  // ==============================
+  const USER = "mumeino";
   const RSS_URL = `https://note.com/${USER}/rss`;
   const API_URL =
     `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}`;
 
   const Calendar = tui.Calendar;
 
-  // ===== カレンダー初期化 =====
+  // ==============================
+  // JST用 ISO文字列生成（Zなし）
+  // ==============================
+  function toLocalISOString(date) {
+    const pad = n => String(n).padStart(2, '0');
+    return (
+      `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+      `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+    );
+  }
+
+  // ==============================
+  // カレンダー初期化
+  // ==============================
   const calendar = new Calendar('#calendar', {
     defaultView: 'month',
     useDetailPopup: false,
@@ -101,18 +116,20 @@
     ]
   });
 
-  // ===== 表示中の年月ラベル =====
+  // ==============================
+  // 月ラベル更新
+  // ==============================
   function updateMonthLabel() {
     const date = calendar.getDate();
-    const y = date.getFullYear();
-    const m = date.getMonth() + 1;
     document.getElementById('currentMonth').textContent =
-      `${y}年 ${m}月`;
+      `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
   }
 
   updateMonthLabel();
 
-  // ===== ナビゲーション =====
+  // ==============================
+  // ナビゲーション
+  // ==============================
   document.getElementById('prev').onclick = () => {
     calendar.prev();
     updateMonthLabel();
@@ -128,21 +145,27 @@
     updateMonthLabel();
   };
 
-  // ===== RSS → イベント変換（JST表示） =====
+  // ==============================
+  // RSS → カレンダーイベント
+  // ==============================
   fetch(API_URL)
     .then(res => res.json())
     .then(data => {
       const events = data.items.map(item => {
-        const start = new Date(item.pubDate); // JSTで表示される
-        const end = new Date(start.getTime() + 30 * 60 * 1000);
+        // RSSはUTC
+        const utcStart = new Date(item.pubDate);
+        const utcEnd = new Date(utcStart.getTime() + 30 * 60 * 1000);
 
         return {
           id: item.guid || item.link,
           calendarId: 'note',
           title: item.title,
           category: 'time',
-          start: start, // Dateオブジェクトのまま渡す
-          end: end,
+
+          // ★ ZなしISO → JSTとして描画される
+          start: toLocalISOString(utcStart),
+          end: toLocalISOString(utcEnd),
+
           raw: {
             link: item.link
           }
@@ -156,7 +179,9 @@
       alert("データ取得に失敗しました");
     });
 
-  // ===== クリックで note 記事を開く =====
+  // ==============================
+  // クリックで note を開く
+  // ==============================
   calendar.on('selectEvent', event => {
     const link = event.event.raw.link;
     if (link) {
