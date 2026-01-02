@@ -34,26 +34,11 @@
     #calendar-wrapper {
       height: calc(100vh - 110px);
       overflow: hidden;
+      touch-action: pan-y; /* ← 横スワイプのみ許可 */
     }
 
     #calendar {
       height: 100%;
-      transition: opacity 0.25s ease, transform 0.25s ease;
-    }
-
-    .fade-out-left {
-      opacity: 0;
-      transform: translateX(-30px);
-    }
-
-    .fade-out-right {
-      opacity: 0;
-      transform: translateX(30px);
-    }
-
-    .fade-in {
-      opacity: 1;
-      transform: translateX(0);
     }
 
     .note-title {
@@ -90,7 +75,8 @@
     <section class="modal-card-body">
       <p class="has-text-grey is-size-7" id="modalDate"></p>
       <hr>
-      <a id="modalLink" href="#" target="_blank" class="button is-link is-small">
+      <a id="modalLink" href="#" target="_blank"
+         class="button is-link is-small">
         noteで記事を開く
       </a>
     </section>
@@ -113,8 +99,6 @@
 $(function () {
 
   const Calendar = tui.Calendar;
-  const $calendarEl = $('#calendar');
-
   const calendar = new Calendar('#calendar', {
     defaultView: 'month',
     taskView: false,
@@ -123,38 +107,40 @@ $(function () {
     useCreationPopup: false
   });
 
-  /* --------- 月移動アニメ --------- */
-  function animateMove(direction, action) {
-    const outClass = direction === 'next'
-      ? 'fade-out-left'
-      : 'fade-out-right';
-
-    $calendarEl
-      .removeClass('fade-in')
-      .addClass(outClass);
-
-    setTimeout(() => {
-      action();
-      $calendarEl
-        .removeClass(outClass)
-        .addClass('fade-in');
-    }, 250);
-  }
-
-  $('#prevMonth').on('click', () =>
-    animateMove('prev', () => calendar.prev())
-  );
-  $('#nextMonth').on('click', () =>
-    animateMove('next', () => calendar.next())
-  );
+  /* --------- 月移動（ボタン） --------- */
+  $('#prevMonth').on('click', () => calendar.prev());
+  $('#nextMonth').on('click', () => calendar.next());
   $('#today').on('click', () => calendar.today());
 
-  const hammer = new Hammer(document.getElementById('calendar-wrapper'));
-  hammer.on('swipeleft', () =>
-    animateMove('next', () => calendar.next())
+  /* --------- スワイプ（月移動） --------- */
+  const hammer = new Hammer(
+    document.getElementById('calendar-wrapper')
   );
+
+  hammer.get('swipe').set({
+    direction: Hammer.DIRECTION_HORIZONTAL,
+    threshold: 30
+  });
+
+  let swipeLock = false;
+
+  function safeMove(action) {
+    if (swipeLock) return;
+    swipeLock = true;
+
+    action();
+
+    setTimeout(() => {
+      swipeLock = false;
+    }, 300);
+  }
+
+  hammer.on('swipeleft', () =>
+    safeMove(() => calendar.next())
+  );
+
   hammer.on('swiperight', () =>
-    animateMove('prev', () => calendar.prev())
+    safeMove(() => calendar.prev())
   );
 
   /* --------- RSS --------- */
@@ -165,7 +151,8 @@ $(function () {
 
   feeds.forEach(feed => {
     const rssUrl = `https://note.com/${feed.id}/rss`;
-    const apiUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
+    const apiUrl =
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
 
     $.get(apiUrl, function (data) {
       $(data).find('item').each(function () {
@@ -180,17 +167,13 @@ $(function () {
           start: date,
           end: date,
           isReadOnly: true,
-          raw: {
-            title: title,
-            link: link,
-            date: date
-          }
+          raw: { title, link, date }
         }]);
       });
     });
   });
 
-  /* --------- モーダル表示 --------- */
+  /* --------- モーダル --------- */
   calendar.on('clickEvent', function (e) {
     const event = e.event;
 
@@ -203,7 +186,6 @@ $(function () {
     $('#noteModal').addClass('is-active');
   });
 
-  /* --------- モーダル閉じる --------- */
   $('.modal-background, .modal .delete').on('click', function () {
     $('#noteModal').removeClass('is-active');
   });
