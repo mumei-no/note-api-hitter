@@ -4,41 +4,55 @@
   <meta charset="UTF-8">
   <title>note 投稿カレンダー</title>
 
-  <!-- Bootstrap 5 -->
+  <!-- ========================================
+       Bootstrap 5 (CSS)
+       レスポンシブなデザイン、ボタン、モーダルなどに使用
+  ========================================= -->
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
     rel="stylesheet"
   >
 
-  <!-- FullCalendar -->
+  <!-- ========================================
+       FullCalendar (CSS)
+       カレンダー表示用
+  ========================================= -->
   <link
     href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css"
     rel="stylesheet"
   >
 
   <style>
+    /* ========================================
+       基本レイアウト
+       html, bodyを100%にしてカレンダーを画面いっぱいに
+    ========================================= */
     html, body {
       height: 100%;
       margin: 0;
     }
 
     body {
-      overflow: hidden;
+      overflow: hidden; /* スクロールバー非表示 */
     }
 
+    /* カレンダー上部ヘッダー */
     .calendar-header {
       padding: 1rem;
       border-bottom: 1px solid #dee2e6;
     }
 
+    /* カレンダーのラッパー高さ */
     #calendar-wrapper {
-      height: calc(100vh - 110px);
+      height: calc(100vh - 110px); /* ヘッダー分を引いた高さ */
     }
 
+    /* カレンダー本体を親に合わせる */
     #calendar {
       height: 100%;
     }
 
+    /* 投稿アイコンとタイトルの間隔 */
     .note-prefix {
       margin-right: 0.25em;
     }
@@ -46,7 +60,10 @@
 </head>
 <body>
 
-<!-- ヘッダー -->
+<!-- ========================================
+     ヘッダー部分
+     月移動ボタン、タイトル表示
+========================================= -->
 <div class="calendar-header">
   <h1 class="h5 mb-2">note 投稿カレンダー</h1>
 
@@ -57,12 +74,18 @@
   </div>
 </div>
 
-<!-- カレンダー -->
+<!-- ========================================
+     カレンダー本体
+     FullCalendarを描画するdiv
+========================================= -->
 <div id="calendar-wrapper">
   <div id="calendar"></div>
 </div>
 
-<!-- モーダル -->
+<!-- ========================================
+     モーダル
+     イベントクリックで記事の詳細を表示
+========================================= -->
 <div class="modal fade" id="noteModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -71,7 +94,9 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
+        <!-- 日付 -->
         <p class="text-muted small" id="modalDate"></p>
+        <!-- note記事リンク -->
         <a
           id="modalLink"
           href="#"
@@ -85,62 +110,86 @@
   </div>
 </div>
 
-<!-- jQuery -->
+<!-- ========================================
+     jQuery (簡単なDOM操作とAjaxに使用)
+========================================= -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<!-- Bootstrap JS -->
+<!-- ========================================
+     Bootstrap JS (モーダルやボタン操作)
+========================================= -->
 <script
   src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
 ></script>
 
-<!-- FullCalendar -->
+<!-- ========================================
+     FullCalendar (カレンダー描画)
+========================================= -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
-<!-- Hammer.js（安全なスワイプ用） -->
+<!-- ========================================
+     Hammer.js
+     タッチ操作によるスワイプ検出
+========================================= -->
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 
 <script>
 $(function () {
 
+  // ========================================
+  // カレンダー本体の初期化
+  // ========================================
   const calendarEl = document.getElementById('calendar');
   const modal = new bootstrap.Modal(document.getElementById('noteModal'));
 
   const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
-    themeSystem: 'bootstrap5',
-    timeZone: 'local',
-    headerToolbar: false,
-    fixedWeekCount: false,
+    initialView: 'dayGridMonth',    // 月表示
+    themeSystem: 'bootstrap5',      // Bootstrapスタイル
+    timeZone: 'local',              // ローカル時間表示
+    headerToolbar: false,           // FullCalendarデフォルトヘッダー非表示
+    fixedWeekCount: false,          // 余分な週を表示しない
 
+    // イベントクリック時の処理
     eventClick(info) {
-      info.jsEvent.preventDefault();
+      info.jsEvent.preventDefault(); // aタグのデフォルト遷移抑制
 
-      $('#modalTitle').text(info.event.title);
+      $('#modalTitle').text(info.event.title); // タイトル表示
       $('#modalDate').text(
-        info.event.start.toLocaleString('ja-JP')
+        info.event.start.toLocaleString('ja-JP') // 日付表示
       );
-      $('#modalLink').attr('href', info.event.url);
+      $('#modalLink').attr('href', info.event.url); // noteリンク
 
-      modal.show();
+      modal.show(); // モーダル表示
     }
   });
 
-  calendar.render();
+  calendar.render(); // カレンダー描画
 
-  /* ---- ボタン操作 ---- */
+  // ========================================
+  // ヘッダーボタン操作
+  // ========================================
   $('#prevMonth').on('click', () => calendar.prev());
   $('#nextMonth').on('click', () => calendar.next());
   $('#today').on('click', () => calendar.today());
 
-  /* ---- スワイプ（月移動・安全版） ---- */
+  // ========================================
+  // スワイプ操作
+  // Hammer.jsを使用
+  // 左スワイプ: 次の月
+  // 右スワイプ: 前の月
+  // ========================================
   const hammer = new Hammer(document.getElementById('calendar-wrapper'));
   hammer.on('swipeleft', () => calendar.next());
   hammer.on('swiperight', () => calendar.prev());
 
-  /* ---- RSS取得（rss2json） ---- */
+  // ========================================
+  // RSS取得（rss2json経由）
+  // noteの投稿をカレンダーに追加
+  // feed.prefix でアイコン分け
+  // ========================================
   const feeds = [
-    { id: 'mumeino', prefix: '📝' },
-    { id: 'info', prefix: '📢' }
+    { id: 'mumeino', prefix: '📝' }, // 一般記事
+    { id: 'info', prefix: '📢' }     // 公式記事
   ];
 
   feeds.forEach(feed => {
@@ -154,10 +203,10 @@ $(function () {
 
       res.items.forEach(item => {
         calendar.addEvent({
-          title: `${feed.prefix} ${item.title}`,
-          start: new Date(item.pubDate),
-          url: item.link,
-          allDay: true
+          title: `${feed.prefix} ${item.title}`, // アイコン付きタイトル
+          start: new Date(item.pubDate),         // 投稿日
+          url: item.link,                        // note記事URL
+          allDay: true                            // 終日イベント
         });
       });
     });
