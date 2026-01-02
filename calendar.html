@@ -17,6 +17,10 @@
       padding: 1.5rem;
     }
 
+    .calendar-controls {
+      margin-bottom: 1rem;
+    }
+
     #calendar-wrapper {
       position: relative;
       overflow: hidden;
@@ -27,6 +31,7 @@
       transition: opacity 0.25s ease, transform 0.25s ease;
     }
 
+    /* 月移動アニメーション */
     .fade-out-left {
       opacity: 0;
       transform: translateX(-30px);
@@ -46,8 +51,20 @@
       margin-left: 0.3em;
     }
 
-    .calendar-controls {
-      margin-bottom: 1rem;
+    /* ===============================
+       記事タイトルを複数行表示
+       =============================== */
+
+    .toastui-calendar-weekday-event,
+    .toastui-calendar-weekday-event-content,
+    .toastui-calendar-event-title {
+      white-space: normal !important;
+    }
+
+    .toastui-calendar-event-title {
+      overflow: visible !important;
+      text-overflow: clip !important;
+      line-height: 1.35;
     }
   </style>
 </head>
@@ -75,13 +92,13 @@
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<!-- dayjs -->
+<!-- dayjs（必須） -->
 <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 
 <!-- TUI Calendar -->
 <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
 
-<!-- Hammer.js -->
+<!-- Hammer.js（スワイプ） -->
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 
 <script>
@@ -98,6 +115,7 @@ $(function () {
     useCreationPopup: false
   });
 
+  /* --------- 月移動アニメーション --------- */
   function animateMove(direction, action) {
     const outClass = direction === 'next'
       ? 'fade-out-left'
@@ -115,7 +133,7 @@ $(function () {
     }, 250);
   }
 
-  /* ---------- ボタン ---------- */
+  /* --------- ボタン操作 --------- */
   $('#prevMonth').on('click', () =>
     animateMove('prev', () => calendar.prev())
   );
@@ -126,7 +144,7 @@ $(function () {
 
   $('#today').on('click', () => calendar.today());
 
-  /* ---------- スワイプ ---------- */
+  /* --------- スワイプ操作 --------- */
   const hammer = new Hammer(document.getElementById('calendar-wrapper'));
   hammer.on('swipeleft', () =>
     animateMove('next', () => calendar.next())
@@ -135,7 +153,7 @@ $(function () {
     animateMove('prev', () => calendar.prev())
   );
 
-  /* ---------- RSS ---------- */
+  /* --------- RSS取得 --------- */
   const feeds = [
     { id: 'mumeino', prefix: '📝' },
     { id: 'info', prefix: '📢' }
@@ -164,7 +182,7 @@ $(function () {
     });
   });
 
-  /* ---------- 記事クリック ---------- */
+  /* --------- 記事クリック --------- */
   calendar.on('clickEvent', function (e) {
     const link = e.event.raw.link;
     if (link) {
