@@ -1,215 +1,221 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>note 投稿カレンダー</title>
+<meta charset="UTF-8">
+<title>note 投稿カレンダー</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Bulma -->
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+<!-- Bulma -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
 
-  <!-- TUI Calendar -->
-  <link rel="stylesheet"
-        href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css">
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+}
 
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-    }
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
-    body {
-      overflow: hidden;
-    }
+.calendar {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
 
-    .calendar-header {
-      padding: 1rem;
-      border-bottom: 1px solid #ddd;
-    }
+.day {
+  border: 1px solid #ddd;
+  padding: 4px;
+  overflow-y: auto;
+}
 
-    .calendar-controls {
-      margin-top: 0.5rem;
-    }
+.day-number {
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
 
-    #calendar-wrapper {
-      height: calc(100vh - 110px);
-      overflow: hidden;
-    }
+.article {
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
 
-    #calendar {
-      height: 100%;
-      transition: opacity 0.25s ease, transform 0.25s ease;
-    }
+.article:hover {
+  text-decoration: underline;
+}
 
-    .fade-out-left {
-      opacity: 0;
-      transform: translateX(-30px);
-    }
+/* モーダル高速表示（アニメーション最小） */
+.modal-card {
+  max-height: 80vh;
+}
 
-    .fade-out-right {
-      opacity: 0;
-      transform: translateX(30px);
-    }
+.modal-card-body {
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
 
-    .fade-in {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    .note-title {
-      margin-left: 0.3em;
-    }
-  </style>
+/* スワイプ用 */
+.swipe-area {
+  flex: 1;
+  touch-action: pan-y;
+}
+</style>
 </head>
+
 <body>
+<div id="app" class="p-3">
 
-<!-- ヘッダー -->
-<div class="calendar-header">
-  <h1 class="title is-4">note 投稿カレンダー</h1>
+  <!-- ヘッダー -->
+  <div class="level mb-2">
+    <button class="button is-small" id="prevMonth">←</button>
+    <div class="has-text-weight-bold" id="monthLabel"></div>
+    <button class="button is-small" id="nextMonth">→</button>
+  </div>
 
-  <div class="buttons calendar-controls">
-    <button id="prevMonth" class="button is-small">◀ 前月</button>
-    <button id="today" class="button is-small">今月</button>
-    <button id="nextMonth" class="button is-small">次月 ▶</button>
+  <!-- カレンダー -->
+  <div class="swipe-area">
+    <div class="calendar" id="calendar"></div>
   </div>
 </div>
 
-<!-- カレンダー -->
-<div id="calendar-wrapper">
-  <div id="calendar"></div>
-</div>
-
 <!-- モーダル -->
-<div id="noteModal" class="modal">
+<div class="modal" id="modal">
   <div class="modal-background"></div>
   <div class="modal-card">
     <header class="modal-card-head">
       <p class="modal-card-title" id="modalTitle"></p>
       <button class="delete" aria-label="close"></button>
     </header>
-    <section class="modal-card-body">
-      <p class="has-text-grey is-size-7" id="modalDate"></p>
-      <hr>
-      <a id="modalLink" href="#" target="_blank" class="button is-link is-small">
-        noteで記事を開く
-      </a>
-    </section>
+    <section class="modal-card-body" id="modalBody"></section>
+    <footer class="modal-card-foot">
+      <a class="button is-link" id="modalLink" target="_blank">記事を開く</a>
+    </footer>
   </div>
 </div>
 
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-<!-- dayjs -->
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-
-<!-- TUI Calendar -->
-<script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
-
-<!-- Hammer.js -->
-<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-
 <script>
-$(function () {
+/* ========= 設定 ========= */
+const USERS = [
+  { id: "mumeino", official: false },
+  { id: "info", official: true }
+];
 
-  const Calendar = tui.Calendar;
-  const $calendarEl = $('#calendar');
+/* ========= 状態 ========= */
+let current = new Date();
+let articles = [];
 
-  const calendar = new Calendar('#calendar', {
-    defaultView: 'month',
-    taskView: false,
-    scheduleView: false,
-    useDetailPopup: false,
-    useCreationPopup: false
-  });
+/* ========= ダミーデータ（ここをrss2jsonで差し替え） ========= */
+articles = [
+  {
+    title: "長いタイトルの記事でも省略されずに表示されます。これはテスト用のとても長いタイトルです。",
+    content: "これは本文全文です。\n\nモーダルは即時表示されます。",
+    date: "2026-01-10",
+    url: "https://note.com/",
+    official: false
+  },
+  {
+    title: "note公式からのお知らせ",
+    content: "公式記事の全文です。",
+    date: "2026-01-15",
+    url: "https://note.com/info",
+    official: true
+  }
+];
 
-  /* --------- 月移動アニメ --------- */
-  function animateMove(direction, action) {
-    const outClass = direction === 'next'
-      ? 'fade-out-left'
-      : 'fade-out-right';
+/* ========= 描画 ========= */
+function renderCalendar() {
+  const cal = document.getElementById("calendar");
+  cal.innerHTML = "";
 
-    $calendarEl
-      .removeClass('fade-in')
-      .addClass(outClass);
+  const year = current.getFullYear();
+  const month = current.getMonth();
 
-    setTimeout(() => {
-      action();
-      $calendarEl
-        .removeClass(outClass)
-        .addClass('fade-in');
-    }, 250);
+  document.getElementById("monthLabel").textContent =
+    `${year}年 ${month + 1}月`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const days = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    cal.appendChild(document.createElement("div"));
   }
 
-  $('#prevMonth').on('click', () =>
-    animateMove('prev', () => calendar.prev())
-  );
-  $('#nextMonth').on('click', () =>
-    animateMove('next', () => calendar.next())
-  );
-  $('#today').on('click', () => calendar.today());
+  for (let d = 1; d <= days; d++) {
+    const cell = document.createElement("div");
+    cell.className = "day";
 
-  const hammer = new Hammer(document.getElementById('calendar-wrapper'));
-  hammer.on('swipeleft', () =>
-    animateMove('next', () => calendar.next())
-  );
-  hammer.on('swiperight', () =>
-    animateMove('prev', () => calendar.prev())
-  );
+    const num = document.createElement("div");
+    num.className = "day-number";
+    num.textContent = d;
+    cell.appendChild(num);
 
-  /* --------- RSS --------- */
-  const feeds = [
-    { id: 'mumeino', prefix: '📝' },
-    { id: 'info', prefix: '📢' }
-  ];
+    const dateKey =
+      `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-  feeds.forEach(feed => {
-    const rssUrl = `https://note.com/${feed.id}/rss`;
-    const apiUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
-
-    $.get(apiUrl, function (data) {
-      $(data).find('item').each(function () {
-        const title = $(this).find('title').text();
-        const link = $(this).find('link').text();
-        const date = new Date($(this).find('pubDate').text());
-
-        calendar.createEvents([{
-          id: link,
-          calendarId: feed.id,
-          title: `${feed.prefix}<span class="note-title">${title}</span>`,
-          start: date,
-          end: date,
-          isReadOnly: true,
-          raw: {
-            title: title,
-            link: link,
-            date: date
-          }
-        }]);
+    articles
+      .filter(a => a.date === dateKey)
+      .forEach(a => {
+        const div = document.createElement("div");
+        div.className = "article";
+        div.textContent = (a.official ? "📢 " : "") + a.title;
+        div.onclick = () => openModal(a);
+        cell.appendChild(div);
       });
-    });
-  });
 
-  /* --------- モーダル表示 --------- */
-  calendar.on('clickEvent', function (e) {
-    const event = e.event;
+    cal.appendChild(cell);
+  }
+}
 
-    $('#modalTitle').text(event.raw.title);
-    $('#modalDate').text(
-      dayjs(event.raw.date).format('YYYY年MM月DD日 HH:mm')
-    );
-    $('#modalLink').attr('href', event.raw.link);
+/* ========= モーダル ========= */
+function openModal(article) {
+  document.getElementById("modalTitle").textContent =
+    (article.official ? "📢 " : "") + article.title;
+  document.getElementById("modalBody").textContent = article.content;
+  document.getElementById("modalLink").href = article.url;
+  document.getElementById("modal").classList.add("is-active");
+}
 
-    $('#noteModal').addClass('is-active');
-  });
+document.querySelector(".delete").onclick =
+document.querySelector(".modal-background").onclick = () => {
+  document.getElementById("modal").classList.remove("is-active");
+};
 
-  /* --------- モーダル閉じる --------- */
-  $('.modal-background, .modal .delete').on('click', function () {
-    $('#noteModal').removeClass('is-active');
-  });
+/* ========= 月移動 ========= */
+document.getElementById("prevMonth").onclick = () => {
+  current.setMonth(current.getMonth() - 1);
+  renderCalendar();
+};
 
+document.getElementById("nextMonth").onclick = () => {
+  current.setMonth(current.getMonth() + 1);
+  renderCalendar();
+};
+
+/* ========= スワイプ ========= */
+let startX = null;
+const swipe = document.querySelector(".swipe-area");
+
+swipe.addEventListener("touchstart", e => {
+  startX = e.touches[0].clientX;
 });
-</script>
 
+swipe.addEventListener("touchend", e => {
+  if (startX === null) return;
+  const dx = e.changedTouches[0].clientX - startX;
+  if (dx > 80) current.setMonth(current.getMonth() - 1);
+  if (dx < -80) current.setMonth(current.getMonth() + 1);
+  startX = null;
+  renderCalendar();
+});
+
+/* ========= 初期描画 ========= */
+renderCalendar();
+</script>
 </body>
 </html>
