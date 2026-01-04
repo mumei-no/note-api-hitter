@@ -38,20 +38,20 @@ body {
 <input id="input" autocomplete="off" />
 <div id="status"></div>
 
-<!-- wanakana（CDN） -->
-<script src="https://unpkg.com/wanakana@5.3.1/umd/wanakana.min.js"></script>
+<!-- ✅ wanakana（jsDelivr CDN） -->
+<script src="https://cdn.jsdelivr.net/npm/wanakana@5.3.1/umd/wanakana.min.js"></script>
 
 <!-- kuromoji（ローカル） -->
 <script src="./kuromoji.js"></script>
 
 <script>
 /* ======================================
-   1. 出題テキスト（仮）
+   出題テキスト（仮）
    ====================================== */
 const text = "今日はいい天気ですね。";
 
 /* ======================================
-   2. kuromoji 初期化
+   kuromoji 初期化
    ====================================== */
 kuromoji.builder({ dicPath: "./dict" }).build((err, tokenizer) => {
   if (err) {
@@ -71,14 +71,14 @@ kuromoji.builder({ dicPath: "./dict" }).build((err, tokenizer) => {
   // カタカナ → ひらがな（完全正規化）
   const hira = wanakana.toHiragana(reading, { passRomaji: true });
 
-  // ひらがな → ローマ字（IMEモード無効で拗音崩れ防止）
+  // ひらがな → ローマ字（拗音崩れ防止）
   const roma = wanakana.toRomaji(hira, { IMEMode: false });
 
   startGame(text, roma);
 });
 
 /* ======================================
-   3. タイピングゲーム本体
+   タイピングゲーム本体
    ====================================== */
 function startGame(jpText, romaText) {
   const jp = document.getElementById("jp");
@@ -88,16 +88,14 @@ function startGame(jpText, romaText) {
 
   jp.textContent = jpText;
   roma.textContent = romaText;
-
   input.focus();
 
   input.addEventListener("input", () => {
     const val = input.value;
 
     if (romaText.startsWith(val)) {
-      status.textContent = "OK";
+      status.textContent = val === romaText ? "🎉 クリア！" : "OK";
       if (val === romaText) {
-        status.textContent = "🎉 クリア！";
         input.disabled = true;
       }
     } else {
